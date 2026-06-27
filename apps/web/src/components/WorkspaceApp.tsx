@@ -11,7 +11,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Home, Search, LayoutList, KeyRound, Plus, ChevronDown, ChevronRight, X } from "lucide-react";
+import { Home, Search, KeyRound, Plus, ChevronDown, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotebookPane } from "./NotebookPane";
 import { MemoListPane } from "./MemoListPane";
@@ -43,7 +43,6 @@ import {
   MIN_MEMO_LIST_WIDTH_PX,
   MAX_MEMO_LIST_WIDTH_PX,
   DEFAULT_MEMO_LIST_WIDTH_PX,
-  MEMO_TEMPLATES,
   isTextEntryTarget,
   readImageCompressionPreference,
   writeImageCompressionPreference,
@@ -107,8 +106,6 @@ const MobileBottomNav = ({
   onCreateMemo,
   onHome,
   onOpenSettings,
-  onOpenTemplates,
-  onSearch,
 }: {
   activeItem: MobileBottomNavItem;
   canCreateMemo: boolean;
@@ -116,23 +113,14 @@ const MobileBottomNav = ({
   onCreateMemo: () => void;
   onHome: () => void;
   onOpenSettings: () => void;
-  onOpenTemplates: () => void;
-  onSearch: () => void;
 }) => (
   <nav
     className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-5 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden"
     aria-label="移动端主导航"
   >
-    <div className="relative grid h-16 grid-cols-5 items-center">
+    <div className="relative grid h-16 grid-cols-3 items-center">
       <MobileBottomNavButton active={activeItem === "home"} icon={<Home className="h-5 w-5" />} label="首页" onClick={onHome} />
-      <MobileBottomNavButton active={activeItem === "search"} icon={<Search className="h-5 w-5" />} label="搜索" onClick={onSearch} />
       <div aria-hidden="true" />
-      <MobileBottomNavButton
-        active={activeItem === "templates"}
-        icon={<LayoutList className="h-5 w-5" />}
-        label="模板"
-        onClick={onOpenTemplates}
-      />
       <MobileBottomNavButton active={activeItem === "settings"} icon={<KeyRound className="h-5 w-5" />} label="设置" onClick={onOpenSettings} />
       <button
         className="absolute left-1/2 top-[-1.35rem] flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full border-[6px] border-white bg-[#627f58] text-white shadow-[0_12px_26px_rgba(98,127,88,0.32)] transition hover:bg-[#526d49] disabled:cursor-not-allowed disabled:bg-[#b7c5b0] disabled:opacity-70 disabled:hover:bg-[#b7c5b0]"
@@ -864,11 +852,6 @@ export const WorkspaceApp = ({
     });
   };
 
-  const handleCreateChecklistMemo = () => {
-    const checklistTemplate = MEMO_TEMPLATES.find((template) => template.id === "checklist");
-    handleCreateMemo(checklistTemplate);
-  };
-
   const handleMoveNotebook = (
     notebookId: string,
     targetNotebookId: string,
@@ -1478,14 +1461,12 @@ export const WorkspaceApp = ({
               onOpenNotebookPicker={() => setMobileNotebookPickerOpen(true)}
               onSearch={setSearch}
               onCancelMobileSearch={handleCancelMobileSearch}
-              onCreateChecklist={handleCreateChecklistMemo}
               onCreateMemo={handleCreateMemo}
               onClearSelection={clearMemoSelection}
               onEnterSelectionMode={enterMemoSelectionMode}
               onReplaceSelection={replaceMemoSelection}
               onOpenAssets={handleOpenAssets}
               onOpenTags={handleOpenTags}
-              onOpenTemplates={handleOpenTemplates}
               onOpenSettings={handleOpenSettings}
               onOpenTrash={() => {
                 setMemoView("trash");
@@ -1664,8 +1645,6 @@ export const WorkspaceApp = ({
           onCreateMemo={handleCreateMemo}
           onHome={handleMobileHome}
           onOpenSettings={handleOpenSettings}
-          onOpenTemplates={handleOpenTemplates}
-          onSearch={handleMobileSearch}
         />
       )}
       {mobileNotebookPickerOpen && (

@@ -30,7 +30,6 @@ import {
   FilePlus2,
   Plus,
   Compass,
-  Sparkles,
   Layers,
   Settings,
   MoreVertical,
@@ -603,20 +602,12 @@ const MobileQuickActions = ({
   canCreateMemo,
   isCreating,
   locked,
-  onCreateChecklist,
   onCreateMemo,
-  onOpenAssets,
-  onOpenTags,
-  onOpenTemplates,
 }: {
   canCreateMemo: boolean;
   isCreating: boolean;
   locked: boolean;
-  onCreateChecklist: () => void;
   onCreateMemo: () => void;
-  onOpenAssets: () => void;
-  onOpenTags: () => void;
-  onOpenTemplates: () => void;
 }) => (
   <div className="mb-4 flex flex-wrap gap-2 lg:hidden">
     <Button
@@ -628,26 +619,6 @@ const MobileQuickActions = ({
     >
       <Plus className="h-4 w-4" />
       新笔记
-    </Button>
-    <Button
-      className="flex-1 justify-center rounded-full shadow-sm"
-      size="sm"
-      variant="outline"
-      disabled={!canCreateMemo || isCreating || locked}
-      onClick={onCreateChecklist}
-    >
-      <CheckSquare className="h-4 w-4 text-emerald-600" />
-      待办
-    </Button>
-    <Button
-      className="flex-1 justify-center rounded-full shadow-sm"
-      size="sm"
-      variant="outline"
-      disabled={!canCreateMemo || isCreating || locked}
-      onClick={onOpenTemplates}
-    >
-      <Sparkles className="h-4 w-4 text-[#8b5cf6]" />
-      模板
     </Button>
   </div>
 );
@@ -693,8 +664,6 @@ export const MemoListPane = ({
   onOpenTrash,
   onOpenSettings,
   onCreateMemo,
-  onCreateChecklist,
-  onOpenTemplates,
   onSyncQueuedChanges,
   mobileListActionsOpen,
   setMobileListActionsOpen,
@@ -753,8 +722,6 @@ export const MemoListPane = ({
   onOpenTrash: () => void;
   onOpenSettings: () => void;
   onCreateMemo: () => void;
-  onCreateChecklist: () => void;
-  onOpenTemplates: () => void;
   onSyncQueuedChanges: () => void;
   mobileListActionsOpen: boolean;
   setMobileListActionsOpen: (open: boolean) => void;
@@ -1289,11 +1256,7 @@ export const MemoListPane = ({
             canCreateMemo={canCreateMemo && view !== "trash"}
             isCreating={isCreating}
             locked={selectionMode}
-            onCreateChecklist={onCreateChecklist}
             onCreateMemo={onCreateMemo}
-            onOpenAssets={onOpenAssets}
-            onOpenTags={onOpenTags}
-            onOpenTemplates={onOpenTemplates}
           />
         )}
 
