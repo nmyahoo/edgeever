@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Navigate, Route, Routes, useNavigate } from "react-router";
 import { api } from "@/lib/api";
 import { EvernoteImportGuidePane } from "@/components/EvernoteImportGuidePane";
 import { LoginScreen } from "@/components/LoginScreen";
@@ -12,23 +13,25 @@ const AuthLoadingScreen = () => (
   </div>
 );
 
-export const App = () => {
+const EvernoteMigrationRoute = () => {
+  const navigate = useNavigate();
+
+  return (
+    <EvernoteImportGuidePane
+      onClose={() => {
+        if (window.opener) {
+          window.close();
+          return;
+        }
+
+        navigate("/");
+      }}
+    />
+  );
+};
+
+const AuthenticatedWorkspace = () => {
   const queryClient = useQueryClient();
-
-  if (window.location.pathname === "/evernote-migration") {
-    return (
-      <EvernoteImportGuidePane
-        onClose={() => {
-          if (window.opener) {
-            window.close();
-            return;
-          }
-
-          window.location.href = "/";
-        }}
-      />
-    );
-  }
 
   const sessionQuery = useQuery({
     queryKey: ["auth", "session"],
@@ -96,3 +99,12 @@ export const App = () => {
     />
   );
 };
+
+export const App = () => (
+  <Routes>
+    <Route path="/evernote-migration" element={<EvernoteMigrationRoute />} />
+    <Route path="/" element={<AuthenticatedWorkspace />} />
+    <Route path="/settings" element={<AuthenticatedWorkspace />} />
+    <Route path="*" element={<Navigate to="/" replace />} />
+  </Routes>
+);
