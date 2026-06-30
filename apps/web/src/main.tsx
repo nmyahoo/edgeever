@@ -4,9 +4,42 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import { registerSW } from "virtual:pwa-register";
 import { App } from "./app/App";
+import { emitPwaUpdateNotice, markPwaUpdateReloadPending } from "./lib/pwa-update-notice";
 import "./styles/globals.css";
 
-registerSW({ immediate: true });
+const PWA_UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1_000;
+
+let updateServiceWorker: ReturnType<typeof registerSW>;
+
+updateServiceWorker = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    emitPwaUpdateNotice({ kind: "checking" });
+    void updateServiceWorker(true);
+  },
+  onNeedReload() {
+    markPwaUpdateReloadPending();
+    window.location.reload();
+  },
+  onRegisteredSW(_swScriptUrl, registration) {
+    if (!registration) {
+      return;
+    }
+
+    const checkForUpdate = () => {
+      if (document.visibilityState === "visible") {
+        void registration.update().catch(() => undefined);
+      }
+    };
+
+    const updateInterval = window.setInterval(checkForUpdate, PWA_UPDATE_CHECK_INTERVAL_MS);
+    window.addEventListener("beforeunload", () => window.clearInterval(updateInterval), { once: true });
+    document.addEventListener("visibilitychange", checkForUpdate);
+  },
+  onRegisterError(error) {
+    console.warn("PWA service worker registration failed", error);
+  },
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {

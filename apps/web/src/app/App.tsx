@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Navigate, Route, Routes, useNavigate } from "react-router";
+import { PwaUpdateNotice } from "@/components/PwaUpdateNotice";
 import { api } from "@/lib/api";
 import { EVERNOTE_MIGRATION_PATH } from "@/lib/routes";
 import type { AuthSession } from "@edgeever/shared";
@@ -111,10 +112,13 @@ const AuthenticatedWorkspace = () => {
 };
 
 export const App = () => (
-  <Routes>
-    <Route path={EVERNOTE_MIGRATION_PATH} element={<EvernoteMigrationRoute />} />
-    <Route path="/" element={<AuthenticatedWorkspace />} />
-    <Route path="/settings" element={<AuthenticatedWorkspace />} />
-    <Route path="*" element={<Navigate to="/" replace />} />
-  </Routes>
+  <>
+    <Routes>
+      <Route path={EVERNOTE_MIGRATION_PATH} element={<EvernoteMigrationRoute />} />
+      <Route path="/" element={<AuthenticatedWorkspace />} />
+      <Route path="/settings" element={<AuthenticatedWorkspace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+    <PwaUpdateNotice />
+  </>
 );
