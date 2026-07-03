@@ -1,6 +1,6 @@
-import { useRef, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
-import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import { NodeViewWrapper, ReactNodeViewRenderer, useEditor, EditorContent, type Editor, type NodeViewProps } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -62,6 +62,10 @@ import {
 
 const SUPPORTED_PASTE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp", "image/avif"]);
 const MOBILE_EDITOR_QUERY = "(max-width: 639px)";
+const DEFAULT_IMAGE_WIDTH_PERCENT = 72;
+const MIN_IMAGE_WIDTH_PERCENT = 25;
+const MAX_IMAGE_WIDTH_PERCENT = 100;
+const IMAGE_WIDTH_PRESETS = [35, 50, 72, 100];
 
 type NoteSearchMatch = {
   from: number;
@@ -128,6 +132,135 @@ const getImageFilesFromDataTransfer = (dataTransfer: DataTransfer | null) => {
 
   return files.filter((file) => SUPPORTED_PASTE_IMAGE_TYPES.has(file.type));
 };
+
+const clampImageWidth = (width: number) =>
+  Math.min(MAX_IMAGE_WIDTH_PERCENT, Math.max(MIN_IMAGE_WIDTH_PERCENT, Math.round(width)));
+
+const parseImageWidth = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return clampImageWidth(value);
+  }
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const match = /(\d+(?:\.\d+)?)/.exec(value);
+  return match ? clampImageWidth(Number(match[1])) : null;
+};
+
+const ResizableImageNodeView = ({ editor, node, selected, updateAttributes }: NodeViewProps) => {
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const width = parseImageWidth(node.attrs.width) ?? DEFAULT_IMAGE_WIDTH_PERCENT;
+  const editable = editor.isEditable;
+  const alt = typeof node.attrs.alt === "string" ? node.attrs.alt : "";
+  const title = typeof node.attrs.title === "string" ? node.attrs.title : "";
+  const src = typeof node.attrs.src === "string" ? node.attrs.src : "";
+
+  const updateWidth = useCallback(
+    (nextWidth: number) => {
+      updateAttributes({ width: clampImageWidth(nextWidth) });
+    },
+    [updateAttributes]
+  );
+
+  const startResize = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>) => {
+      if (!editable) {
+        return;
+      }
+
+      const wrapper = wrapperRef.current;
+      const parent = wrapper?.parentElement;
+      if (!wrapper || !parent) {
+        return;
+      }
+
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+
+      const parentWidth = parent.getBoundingClientRect().width;
+      if (parentWidth <= 0) {
+        return;
+      }
+
+      const updateFromPointer = (clientX: number) => {
+        const wrapperLeft = wrapper.getBoundingClientRect().left;
+        updateWidth(((clientX - wrapperLeft) / parentWidth) * 100);
+      };
+
+      const handlePointerMove = (moveEvent: PointerEvent) => updateFromPointer(moveEvent.clientX);
+      const stopResize = () => {
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerup", stopResize);
+        window.removeEventListener("pointercancel", stopResize);
+      };
+
+      window.addEventListener("pointermove", handlePointerMove);
+      window.addEventListener("pointerup", stopResize);
+      window.addEventListener("pointercancel", stopResize);
+      updateFromPointer(event.clientX);
+    },
+    [editable, updateWidth]
+  );
+
+  return (
+    <NodeViewWrapper
+      ref={wrapperRef}
+      as="figure"
+      className={cn("edgeever-image-node", selected && "is-selected")}
+      style={{ width: `${width}%` }}
+      data-width={width}
+    >
+      <img src={src} alt={alt} title={title || undefined} draggable={false} />
+      {editable && selected && (
+        <div className="edgeever-image-controls" contentEditable={false}>
+          <div className="edgeever-image-presets" aria-label="图片缩放">
+            {IMAGE_WIDTH_PRESETS.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                className={cn("edgeever-image-preset", width === preset && "is-active")}
+                title={`缩放到 ${preset}%`}
+                aria-label={`缩放到 ${preset}%`}
+                onClick={() => updateWidth(preset)}
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="edgeever-image-resize-handle"
+            title="拖拽调整图片宽度"
+            aria-label="拖拽调整图片宽度"
+            onPointerDown={startResize}
+          />
+        </div>
+      )}
+    </NodeViewWrapper>
+  );
+};
+
+const ResizableImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: (element) =>
+          parseImageWidth(element.getAttribute("data-width") ?? element.getAttribute("width") ?? element.style.width),
+        renderHTML: (attributes) => {
+          const width = parseImageWidth(attributes.width);
+          return width ? { "data-width": String(width), style: `width: ${width}%` } : {};
+        },
+      },
+    };
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(ResizableImageNodeView);
+  },
+});
 
 const syncStatusToSaveState = (status: "pending" | "syncing" | "conflict" | "error") => {
   if (status === "conflict") {
@@ -366,6 +499,7 @@ export const EditorPane = ({
               src: resource.url,
               alt: file.name,
               title: file.name,
+              width: DEFAULT_IMAGE_WIDTH_PERCENT,
             })
             .run();
         }
@@ -416,6 +550,7 @@ export const EditorPane = ({
                 src: resource.url,
                 alt: file.name,
                 title: file.name,
+                width: DEFAULT_IMAGE_WIDTH_PERCENT,
               })
               .run();
           } else {
@@ -441,7 +576,7 @@ export const EditorPane = ({
   const editor = useEditor({
     extensions: [
       StarterKit,
-      Image.configure({
+      ResizableImage.configure({
         allowBase64: false,
         inline: false,
       }),
