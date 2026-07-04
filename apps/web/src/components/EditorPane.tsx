@@ -450,9 +450,18 @@ export const EditorPane = ({
   const draftTagsTextRef = useRef("");
   const saveStateRef = useRef<"idle" | "saving" | "saved" | "queued" | "error" | "conflict">("idle");
 
-  const scheduleAutoSave = useCallback(() => {
+  const clearAutoSaveTimer = useCallback(() => {
     if (autoSaveTimerRef.current !== null) {
       window.clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleAutoSave = useCallback(() => {
+    clearAutoSaveTimer();
+
+    if (isMobileViewport && isMobileEditing) {
+      return;
     }
 
     const delay = isMobileViewport ? 3000 : 1200;
@@ -465,7 +474,7 @@ export const EditorPane = ({
 
       setAutoSaveVersion((version) => version + 1);
     }, delay);
-  }, [isMobileViewport]);
+  }, [clearAutoSaveTimer, isMobileEditing, isMobileViewport]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(MOBILE_EDITOR_QUERY);
@@ -671,10 +680,7 @@ export const EditorPane = ({
       handleDOMEvents: {
         compositionstart: () => {
           isComposingRef.current = true;
-          if (autoSaveTimerRef.current !== null) {
-            window.clearTimeout(autoSaveTimerRef.current);
-            autoSaveTimerRef.current = null;
-          }
+          clearAutoSaveTimer();
           return false;
         },
         compositionend: () => {
@@ -837,6 +843,12 @@ export const EditorPane = ({
       }
     };
   }, [editor, isMobileViewport, mobileToolbarOpen]);
+
+  useEffect(() => {
+    if (isMobileViewport && isMobileEditing) {
+      clearAutoSaveTimer();
+    }
+  }, [clearAutoSaveTimer, isMobileEditing, isMobileViewport]);
 
   const persistCurrentDraft = useCallback(
     (nextTitle = title, nextTagsText = tagsText) => {
@@ -1144,6 +1156,7 @@ export const EditorPane = ({
       autoSaveVersion === 0 ||
       autoSaveVersion === lastAutoSaveVersionRef.current ||
       !hasUnsavedChanges ||
+      (isMobileViewport && isMobileEditing) ||
       saveBlocked ||
       saveMutation.isPending ||
       saveState === "conflict"
@@ -1153,7 +1166,7 @@ export const EditorPane = ({
 
     lastAutoSaveVersionRef.current = autoSaveVersion;
     saveMutation.mutate();
-  }, [autoSaveVersion, editor, hasUnsavedChanges, memo, saveBlocked, saveMutation, saveState]);
+  }, [autoSaveVersion, editor, hasUnsavedChanges, isMobileEditing, isMobileViewport, memo, saveBlocked, saveMutation, saveState]);
 
   useEffect(() => {
     if (!saveBlocked && hasUnsavedChangesRef.current && !isComposingRef.current) {
@@ -1310,6 +1323,8 @@ export const EditorPane = ({
   };
 
   const handleMobileBack = () => {
+    clearAutoSaveTimer();
+
     if (saveBlocked && editor && hasUnsavedChanges) {
       pendingBackAfterSaveRef.current = true;
       setSaveState("saving");
@@ -1335,6 +1350,8 @@ export const EditorPane = ({
   };
 
   const handleMobileDone = () => {
+    clearAutoSaveTimer();
+
     if (readOnly || saveBlocked || !editor || !hasUnsavedChanges) {
       setIsMobileEditing(false);
       setMobileToolbarOpen(false);
