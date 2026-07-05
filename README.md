@@ -17,8 +17,6 @@ EdgeEver fills that gap: familiar notes interaction, open data, API access, MCP 
 ## Online Demo
 
 - Demo: [https://demo.edgeever.org](https://demo.edgeever.org)
-- Username: `ee-demo`
-- Password: `demo#dZ6Q29Zjfor%`
 
 The public demo resets daily and restores sample notes. Do not store private content there.
 
