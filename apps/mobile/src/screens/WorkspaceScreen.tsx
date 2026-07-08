@@ -1571,6 +1571,7 @@ const CreateMemoModal = ({
   const [tagsText, setTagsText] = useState("");
   const [contentMarkdown, setContentMarkdown] = useState("");
   const [contentSelection, setContentSelection] = useState<TextSelection>({ start: 0, end: 0 });
+  const [insertTextOpen, setInsertTextOpen] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -1623,6 +1624,12 @@ const CreateMemoModal = ({
     setContentSelection(next.selection);
   };
 
+  const insertManualText = (text: string) => {
+    const next = insertPlainText(contentMarkdown, contentSelection, text);
+    setContentMarkdown(next.value);
+    setContentSelection(next.selection);
+  };
+
   return (
     <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
       <SafeAreaView style={styles.modalSafeArea}>
@@ -1663,6 +1670,7 @@ const CreateMemoModal = ({
               setContentMarkdown(next.value);
               setContentSelection(next.selection);
             }}
+            onInsertText={() => setInsertTextOpen(true)}
             onPasteText={() => void pasteClipboardText()}
           />
           <TextInput
@@ -1681,6 +1689,7 @@ const CreateMemoModal = ({
             <Text style={styles.errorText}>{createMutation.error instanceof Error ? createMutation.error.message : "创建失败"}</Text>
           ) : null}
         </ScrollView>
+        <InsertTextModal onClose={() => setInsertTextOpen(false)} onInsert={insertManualText} visible={insertTextOpen} />
       </SafeAreaView>
     </Modal>
   );
@@ -3540,6 +3549,7 @@ const EditMemoModal = ({
   const [replaceQuery, setReplaceQuery] = useState("");
   const [replaceValue, setReplaceValue] = useState("");
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [insertTextOpen, setInsertTextOpen] = useState(false);
   const replaceMatches = useMemo(() => getTextSearchMatches(contentMarkdown, replaceQuery), [contentMarkdown, replaceQuery]);
 
   useEffect(() => {
@@ -3728,6 +3738,12 @@ const EditMemoModal = ({
     setContentSelection(next.selection);
   };
 
+  const insertManualText = (text: string) => {
+    const next = insertPlainText(contentMarkdown, contentSelection, text);
+    setContentMarkdown(next.value);
+    setContentSelection(next.selection);
+  };
+
   return (
     <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={Boolean(memo)}>
       <SafeAreaView style={styles.modalSafeArea}>
@@ -3769,6 +3785,7 @@ const EditMemoModal = ({
               setContentMarkdown(next.value);
               setContentSelection(next.selection);
             }}
+            onInsertText={() => setInsertTextOpen(true)}
             onPasteText={() => void pasteClipboardText()}
             onUploadImage={() => uploadResourceMutation.mutate()}
           />
@@ -3821,6 +3838,7 @@ const EditMemoModal = ({
             <Text style={styles.errorText}>{uploadResourceMutation.error instanceof Error ? uploadResourceMutation.error.message : "上传失败"}</Text>
           ) : null}
         </ScrollView>
+        <InsertTextModal onClose={() => setInsertTextOpen(false)} onInsert={insertManualText} visible={insertTextOpen} />
       </SafeAreaView>
     </Modal>
   );
@@ -4228,16 +4246,19 @@ const BottomNavItem = ({ active = false, icon, label, onPress }: { active?: bool
 const MarkdownToolbar = ({
   isUploading = false,
   onAction,
+  onInsertText,
   onPasteText,
   onUploadImage,
 }: {
   isUploading?: boolean;
   onAction: (action: MarkdownAction) => void;
+  onInsertText?: () => void;
   onPasteText?: () => void;
   onUploadImage?: () => void;
 }) => (
   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.markdownToolbar}>
     {onPasteText ? <MarkdownToolbarButton icon={<Copy color="#334155" size={15} />} label="粘贴" onPress={onPasteText} /> : null}
+    {onInsertText ? <MarkdownToolbarButton icon={<Pencil color="#334155" size={15} />} label="输入" onPress={onInsertText} /> : null}
     {onUploadImage ? (
       <MarkdownToolbarButton disabled={isUploading} icon={<ImagePlus color="#334155" size={15} />} label={isUploading ? "上传中" : "图片"} onPress={onUploadImage} />
     ) : null}
@@ -4269,6 +4290,63 @@ const MarkdownToolbarButton = ({
     <Text style={styles.markdownToolText}>{label}</Text>
   </Pressable>
 );
+
+const InsertTextModal = ({
+  onClose,
+  onInsert,
+  visible,
+}: {
+  onClose: () => void;
+  onInsert: (text: string) => void;
+  visible: boolean;
+}) => {
+  const [text, setText] = useState("");
+
+  useEffect(() => {
+    if (!visible) {
+      setText("");
+    }
+  }, [visible]);
+
+  const handleInsert = () => {
+    if (!text.trim()) {
+      return;
+    }
+
+    onInsert(text);
+    setText("");
+    onClose();
+  };
+
+  return (
+    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
+      <Pressable onPress={onClose} style={styles.actionSheetBackdrop}>
+        <Pressable style={styles.insertTextSheet}>
+          <View style={styles.actionSheetHandle} />
+          <Text style={styles.actionSheetTitle}>输入文本</Text>
+          <TextInput
+            autoFocus
+            multiline
+            onChangeText={setText}
+            placeholder="输入要插入到正文的内容"
+            placeholderTextColor="#94a3b8"
+            style={styles.insertTextInput}
+            textAlignVertical="top"
+            value={text}
+          />
+          <View style={styles.actionRow}>
+            <ActionButton label="取消" onPress={onClose}>
+              <X color="#0f172a" size={16} />
+            </ActionButton>
+            <ActionButton disabled={!text.trim()} label="插入" onPress={handleInsert}>
+              <Check color={text.trim() ? "#0f172a" : "#cbd5e1"} size={16} />
+            </ActionButton>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+};
 
 const parseTags = (value: string) =>
   Array.from(
@@ -5382,6 +5460,26 @@ const styles = StyleSheet.create({
   },
   actionSheetItemTextDanger: {
     color: "#b91c1c",
+  },
+  insertTextSheet: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    gap: 10,
+    paddingBottom: 28,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+  insertTextInput: {
+    backgroundColor: "#f8fafc",
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    borderWidth: 1,
+    color: "#0f172a",
+    fontSize: 15,
+    lineHeight: 22,
+    minHeight: 160,
+    padding: 12,
   },
   detailContent: {
     padding: 18,
