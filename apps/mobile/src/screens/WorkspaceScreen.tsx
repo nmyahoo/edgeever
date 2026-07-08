@@ -116,6 +116,7 @@ type NotebookOption = {
   notebook: Notebook;
   depth: number;
 };
+type MobileNotebookSortMode = "manual" | "name-asc" | "memo-count-desc" | "updated-desc";
 
 export const WorkspaceScreen = () => {
   const { client, session, signOut } = useSession();
@@ -1112,7 +1113,10 @@ const NotebookManagerModal = ({ notebooks, onClose, visible }: { notebooks: Note
   const [editingNotebookId, setEditingNotebookId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [editingParentId, setEditingParentId] = useState<string | null>(null);
-  const notebookOptions = flattenNotebooks(notebooks);
+  const [notebookSearchText, setNotebookSearchText] = useState("");
+  const [notebookSortMode, setNotebookSortMode] = useState<MobileNotebookSortMode>("manual");
+  const notebookOptions = flattenNotebooks(notebooks, notebookSortMode);
+  const visibleNotebookOptions = filterNotebookOptions(notebookOptions, notebookSearchText);
 
   const invalidateNotebooks = async () => {
     await Promise.all([
@@ -1220,7 +1224,30 @@ const NotebookManagerModal = ({ notebooks, onClose, visible }: { notebooks: Note
           ) : null}
 
           <Text style={styles.label}>全部笔记本</Text>
-          {notebookOptions.map(({ depth, notebook }) => {
+          <View style={styles.searchBox}>
+            <Search color="#64748b" size={18} />
+            <TextInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              onChangeText={setNotebookSearchText}
+              placeholder="搜索笔记本"
+              placeholderTextColor="#94a3b8"
+              style={styles.searchInput}
+              value={notebookSearchText}
+            />
+            {notebookSearchText ? (
+              <Pressable onPress={() => setNotebookSearchText("")}>
+                <X color="#64748b" size={18} />
+              </Pressable>
+            ) : null}
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <OptionPill active={notebookSortMode === "manual"} label="手动排序" onPress={() => setNotebookSortMode("manual")} />
+            <OptionPill active={notebookSortMode === "name-asc"} label="名称 A-Z" onPress={() => setNotebookSortMode("name-asc")} />
+            <OptionPill active={notebookSortMode === "memo-count-desc"} label="笔记数量" onPress={() => setNotebookSortMode("memo-count-desc")} />
+            <OptionPill active={notebookSortMode === "updated-desc"} label="最近更新" onPress={() => setNotebookSortMode("updated-desc")} />
+          </ScrollView>
+          {visibleNotebookOptions.map(({ depth, notebook }) => {
             const editing = editingNotebookId === notebook.id;
             const parentOptions = notebookOptions.filter((option) => option.notebook.id !== notebook.id && !isNotebookDescendant(notebooks, option.notebook.id, notebook.id));
 
@@ -1265,6 +1292,12 @@ const NotebookManagerModal = ({ notebooks, onClose, visible }: { notebooks: Note
               </View>
             );
           })}
+          {visibleNotebookOptions.length === 0 ? (
+            <View style={styles.emptyInlinePanel}>
+              <BookOpen color="#94a3b8" size={28} />
+              <Text style={styles.mutedText}>没有匹配的笔记本</Text>
+            </View>
+          ) : null}
           {renameNotebookMutation.error ? (
             <Text style={styles.errorText}>{renameNotebookMutation.error instanceof Error ? renameNotebookMutation.error.message : "重命名失败"}</Text>
           ) : null}
@@ -2777,7 +2810,7 @@ const parseTags = (value: string) =>
     )
   );
 
-const flattenNotebooks = (notebooks: Notebook[]) => {
+const flattenNotebooks = (notebooks: Notebook[], sortMode: MobileNotebookSortMode = "manual") => {
   const byParent = new Map<string | null, Notebook[]>();
   const byId = new Set(notebooks.map((notebook) => notebook.id));
   const result: NotebookOption[] = [];
@@ -2790,7 +2823,7 @@ const flattenNotebooks = (notebooks: Notebook[]) => {
   }
 
   for (const siblings of byParent.values()) {
-    siblings.sort(compareNotebooksForMobile);
+    siblings.sort(getNotebookComparator(sortMode));
   }
 
   const walk = (parentId: string | null, depth: number) => {
@@ -2804,8 +2837,37 @@ const flattenNotebooks = (notebooks: Notebook[]) => {
   return result;
 };
 
-const compareNotebooksForMobile = (left: Notebook, right: Notebook) =>
+const getNotebookComparator = (sortMode: MobileNotebookSortMode) => {
+  if (sortMode === "name-asc") {
+    return compareNotebookNameAsc;
+  }
+
+  if (sortMode === "memo-count-desc") {
+    return (left: Notebook, right: Notebook) => right.memoCount - left.memoCount || compareNotebookNameAsc(left, right);
+  }
+
+  if (sortMode === "updated-desc") {
+    return (left: Notebook, right: Notebook) =>
+      Date.parse(right.lastMemoUpdatedAt || right.updatedAt) - Date.parse(left.lastMemoUpdatedAt || left.updatedAt) || compareNotebookNameAsc(left, right);
+  }
+
+  return compareNotebooksManual;
+};
+
+const compareNotebooksManual = (left: Notebook, right: Notebook) =>
   left.sortOrder - right.sortOrder || left.name.localeCompare(right.name, "zh-CN") || left.id.localeCompare(right.id);
+
+const compareNotebookNameAsc = (left: Notebook, right: Notebook) => left.name.localeCompare(right.name, "zh-CN") || left.id.localeCompare(right.id);
+
+const filterNotebookOptions = (options: NotebookOption[], searchText: string) => {
+  const query = searchText.trim().toLowerCase();
+
+  if (!query) {
+    return options;
+  }
+
+  return options.filter(({ notebook }) => notebook.name.toLowerCase().includes(query) || (notebook.slug || "").toLowerCase().includes(query));
+};
 
 const isNotebookDescendant = (notebooks: Notebook[], candidateNotebookId: string, ancestorNotebookId: string) => {
   let current = notebooks.find((notebook) => notebook.id === candidateNotebookId) ?? null;
