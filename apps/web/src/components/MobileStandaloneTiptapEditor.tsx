@@ -14,6 +14,7 @@ import {
 import { getNotebookMoveOptions } from "@/lib/app-helpers";
 import { compressImageForUpload } from "@/lib/image-compression";
 import { localDb, type LocalDraft } from "@/lib/local-db";
+import { markStandaloneMobileEditorReturning } from "@/lib/mobile-editor";
 import {
   DEFAULT_MOBILE_EDITOR_MEMO_TITLE,
   MOBILE_EDITOR_AUTO_SAVE_DELAY_MS,
@@ -432,13 +433,15 @@ export const MobileStandaloneTiptapEditor = ({
   }, [persistLocalDraft, saveNow, setSaveStateStable]);
 
   const navigateBack = useCallback(() => {
+    markStandaloneMobileEditorReturning(memoId);
+
     if (onLeave) {
       onLeave();
       return;
     }
 
     window.location.replace(returnTo);
-  }, [onLeave, returnTo]);
+  }, [memoId, onLeave, returnTo]);
 
   const leavePage = useCallback(async () => {
     if (leavingRef.current) {
@@ -676,6 +679,7 @@ export const MobileStandaloneTiptapEditor = ({
           void saveNow({ keepalive: true });
         }
       }
+      markStandaloneMobileEditorReturning(memoId);
     };
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden" && dirtyRef.current) {
@@ -683,6 +687,12 @@ export const MobileStandaloneTiptapEditor = ({
         if (!sendBackgroundSave()) {
           void saveNow({ keepalive: true });
         }
+        markStandaloneMobileEditorReturning(memoId);
+        return;
+      }
+
+      if (document.visibilityState === "hidden") {
+        markStandaloneMobileEditorReturning(memoId);
         return;
       }
 
@@ -740,7 +750,7 @@ export const MobileStandaloneTiptapEditor = ({
         window.clearTimeout(initialFocusTimerRef.current);
       }
     };
-  }, [currentSnapshot, draftKey, persistLocalDraft, reconcileBackgroundSave, saveNow, sendBackgroundSave, setSaveStateStable]);
+  }, [currentSnapshot, draftKey, memoId, persistLocalDraft, reconcileBackgroundSave, saveNow, sendBackgroundSave, setSaveStateStable]);
 
   const saveLabel = getMobileEditorSaveLabel(saveState);
   const statusClassName = getMobileEditorStatusClassName(saveState);

@@ -50,7 +50,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { EditorToolbar } from "./EditorToolbar";
 import { RevisionHistoryDialog } from "./dialogs/RevisionHistoryDialog";
 import { api } from "@/lib/api";
-import { openStandaloneMobileEditor } from "@/lib/mobile-editor";
+import { consumeStandaloneMobileEditorReturn, openStandaloneMobileEditor } from "@/lib/mobile-editor";
 import { cn, formatDateTime, parseTagsText } from "@/lib/utils";
 import { docToMarkdown, markdownToDoc, type Notebook, type MemoDetail, type TiptapDoc } from "@edgeever/shared";
 import { compressImageForUpload } from "@/lib/image-compression";
@@ -949,6 +949,13 @@ export const EditorPane = (props: EditorPaneProps) => {
 
   useEffect(() => {
     if (isMobileViewport && mobileDefaultEditRequested && props.memo?.id) {
+      if (consumeStandaloneMobileEditorReturn(props.memo.id)) {
+        props.onMobileDefaultEditConsumed();
+        setMobileNativeEditMemoId(null);
+        props.onBackToList();
+        return;
+      }
+
       if (standaloneOpenMemoIdRef.current === props.memo.id) {
         return;
       }
@@ -957,7 +964,28 @@ export const EditorPane = (props: EditorPaneProps) => {
       props.onMobileDefaultEditConsumed();
       openStandaloneMobileEditor(props.memo.id);
     }
-  }, [isMobileViewport, mobileDefaultEditRequested, props.memo?.id, props.onMobileDefaultEditConsumed]);
+  }, [isMobileViewport, mobileDefaultEditRequested, props.memo?.id, props.onBackToList, props.onMobileDefaultEditConsumed]);
+
+  useEffect(() => {
+    const clearReturnedStandaloneEditor = () => {
+      if (!consumeStandaloneMobileEditorReturn(props.memo?.id ?? null)) {
+        return;
+      }
+
+      props.onMobileDefaultEditConsumed();
+      setMobileNativeEditMemoId(null);
+      props.onBackToList();
+    };
+
+    clearReturnedStandaloneEditor();
+    window.addEventListener("pageshow", clearReturnedStandaloneEditor);
+    document.addEventListener("visibilitychange", clearReturnedStandaloneEditor);
+
+    return () => {
+      window.removeEventListener("pageshow", clearReturnedStandaloneEditor);
+      document.removeEventListener("visibilitychange", clearReturnedStandaloneEditor);
+    };
+  }, [props.memo?.id, props.onBackToList, props.onMobileDefaultEditConsumed]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(MOBILE_EDITOR_QUERY);
