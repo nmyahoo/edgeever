@@ -56,13 +56,14 @@ The automated helper commands are recommended. If you create the Cloudflare reso
 - Three-pane layout: notebook tree, note list, and main editor.
 - Unlimited nested notebooks.
 - Rich text editing.
+- Switch between Markdown source and rich text views on desktop.
 - Note version history for reviewing previous content changes.
 - Local browser-side image compression before upload, often reducing screenshots and large photos by about 50%-90%.
 - Batch note merging.
 - Batch note moving, notebook drag sorting, and hierarchy editing.
 - Offline drafts and local sync queue for existing notes.
 - Single-user login with PBKDF2-SHA256 password hashing.
-- Chrome/Edge web clipper MVP (pending store publication): extract the current article or selected content and save it to a self-hosted EdgeEver instance.
+- Chrome/Edge web clipper is complete and pending store publication.
 
 ## PWA Installation
 
@@ -72,17 +73,7 @@ EdgeEver can be installed as a PWA on desktop or mobile home screens. On desktop
 
 ## Chrome/Edge Web Clipper
 
-The repository includes a Manifest V3 extension in `apps/extension` for Chrome and Microsoft Edge. It lets users configure their own EdgeEver instance and API Token, then save the selected content or the current article as a searchable memo.
-
-The current MVP extracts article content in the browser with Mozilla Readability and converts it to Markdown with Turndown. It does not yet preserve a complete single-file HTML archive or upload page resources to R2.
-
-Build the extension from the repository root:
-
-```sh
-bun run build:extension
-```
-
-Then load `apps/extension/dist` as an unpacked extension from `chrome://extensions` or `edge://extensions` with developer mode enabled. The API Token should have `read:notebooks` and `write:memos` scopes.
+The Chrome/Edge web clipper is complete and pending store publication.
 
 ## Native Clients
 
