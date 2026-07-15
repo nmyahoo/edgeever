@@ -83,6 +83,8 @@ EDGE_EVER_ROUTE_PATTERN               # optional
 
 Existing installations that already use `EDGE_EVER_AUTH_PASSWORD_HASH` may keep it instead of `EDGE_EVER_AUTH_PASSWORD`. If both are present, the hash takes precedence for backward compatibility.
 
+New installations default to `admin` / `admin123`. The password remains a Build Secret and can be changed later in Personal Settings.
+
 For a multi-instance configuration, set `EDGE_EVER_INSTANCE` and the matching scoped variables such as `EDGE_EVER_PROD_D1_DATABASE_ID` instead. The same resolution rules apply in local deployment and Workers Builds.
 
 Workers Builds needs an API token that can deploy Workers, update R2 bindings, and apply D1 migrations. If the automatically created Builds token does not have D1 edit permission, select or create a token with that permission before enabling automated deployments.

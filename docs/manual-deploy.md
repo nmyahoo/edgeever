@@ -23,8 +23,8 @@ If you are comfortable with Cloudflare and the command line, or prefer customize
    # Install dependencies
    bun install
 
-   # Initialize deployment resources and set the first login password
-   EDGE_EVER_PASSWORD='<your password>' bun run deploy:setup
+   # Initialize deployment resources with the default admin / admin123 login
+   bun run deploy:setup
 
    # Check the deployment environment and configurations
    bun run deploy:doctor
@@ -32,6 +32,8 @@ If you are comfortable with Cloudflare and the command line, or prefer customize
    # Deploy to Cloudflare
    bun run deploy
    ```
+
+   To use a custom first-login password, run `EDGE_EVER_PASSWORD='<your password>' bun run deploy:setup` instead. You can also change the password later in Personal Settings.
 
 ### Creating Cloudflare Resources Manually
 
@@ -48,10 +50,10 @@ bunx wrangler d1 create edgeever
 # Create the R2 bucket
 bunx wrangler r2 bucket create edgeever-resources
 
-# Edit .env.local and fill in at least the generated resource and password values
+# Edit .env.local and fill in at least the generated resource values
 # EDGE_EVER_D1_DATABASE_ID=<database_id returned by the D1 command>
 # EDGE_EVER_R2_BUCKET_NAME=edgeever-resources
-# EDGE_EVER_AUTH_PASSWORD=<your login password>
+# EDGE_EVER_AUTH_PASSWORD=admin123
 # EDGE_EVER_SESSION_TTL_DAYS=400
 
 # Validate the completed configuration before deploying
@@ -59,7 +61,7 @@ bun run deploy:doctor
 bun run deploy
 ```
 
-Before running `bun run deploy`, copy the D1 `database_id`, R2 bucket name, and login password into your local `.env.local` file. Keep the session lifetime at the template default of `400` days; the server also caps larger values at 400 days.
+Before running `bun run deploy`, copy the D1 `database_id` and R2 bucket name into your local `.env.local` file. The template uses `admin` / `admin123` for the initial login; edit `EDGE_EVER_AUTH_PASSWORD` if you prefer another initial password. Keep the session lifetime at the template default of `400` days; the server also caps larger values at 400 days.
 
 `bun run deploy` builds the web app, applies remote D1 migrations, deploys the Worker, and uploads `EDGE_EVER_AUTH_PASSWORD` as a Worker Secret. After the first successful login, EdgeEver stores a salted PBKDF2-SHA256 hash in D1. Existing installations may continue to use `EDGE_EVER_AUTH_PASSWORD_HASH`; when both Secrets are set, the hash takes precedence. Verify the deployment by signing in with `EDGE_EVER_AUTH_USERNAME` and the configured password.
 

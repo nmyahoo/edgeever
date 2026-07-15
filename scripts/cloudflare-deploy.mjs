@@ -209,23 +209,21 @@ const ensureAuthPassword = (values) => {
     return check("auth password hash", valid, valid ? "configured" : "invalid");
   }
 
-  const currentPassword = envValue("AUTH_PASSWORD", values);
-  if (currentPassword) {
-    return check("auth password", true, "configured as a secret");
-  }
-
   const password = process.env.EDGE_EVER_PASSWORD?.trim();
-  if (!password) {
-    return check(
-      "auth password",
-      false,
-      "set EDGE_EVER_PASSWORD and rerun setup, or set EDGE_EVER_AUTH_PASSWORD",
-    );
+  if (password) {
+    upsertEnv(targetKey("AUTH_PASSWORD", values), password);
+    console.log("[ok] configured auth password secret");
+    return true;
   }
 
-  upsertEnv(targetKey("AUTH_PASSWORD", values), password);
-  console.log("[ok] configured auth password secret");
-  return true;
+  const currentPassword = envValue("AUTH_PASSWORD", values);
+  return currentPassword
+    ? check("auth password", true, "configured as a secret")
+    : check(
+        "auth password",
+        false,
+        "set EDGE_EVER_PASSWORD and rerun setup, or set EDGE_EVER_AUTH_PASSWORD",
+      );
 };
 
 const doctor = () => {

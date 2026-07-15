@@ -84,6 +84,8 @@ EDGE_EVER_ROUTE_PATTERN               # 可选
 
 已经使用 `EDGE_EVER_AUTH_PASSWORD_HASH` 的旧实例可以继续保留该变量，无需改成 `EDGE_EVER_AUTH_PASSWORD`。为兼容已有实例，两个变量同时存在时哈希优先。
 
+新实例默认使用 `admin` / `admin123`。密码仍应保存为 Build Secret，部署后可以在个人中心修改。
+
 多实例场景则设置 `EDGE_EVER_INSTANCE`，并使用 `EDGE_EVER_PROD_D1_DATABASE_ID` 之类的带实例前缀变量。本地部署和 Workers Builds 使用相同的变量解析规则。
 
 Workers Builds 使用的 API Token 必须拥有 Worker 发布、R2 binding 更新和 D1 migration 所需权限。如果 Cloudflare 自动创建的 Builds token 没有 D1 编辑权限，请选择或新建一个具备该权限的 token。
