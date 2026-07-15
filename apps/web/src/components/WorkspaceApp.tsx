@@ -30,6 +30,8 @@ import { api } from "@/lib/api";
 import {
   MOBILE_EDITOR_RETURN_PARAM,
   clearMobileEditorReturnPreview,
+  consumeStandaloneMobileEditorReturn,
+  getStandaloneMobileEditorReturningMemoId,
   openStandaloneMobileEditor,
   readMobileEditorReturnPreview,
   type MobileEditorReturnPreview,
@@ -959,17 +961,54 @@ export const WorkspaceApp = ({
 
   const clearPendingCreatedMemo = useCallback(() => {}, []);
 
+  const applyMobileEditorReturnPreview = useCallback((memoId: string | null) => {
+    const returnPreview = readMobileEditorReturnPreview(memoId);
+    if (!returnPreview) {
+      return;
+    }
+
+    setMobileEditorReturnPreview(returnPreview);
+    clearMobileEditorReturnPreview(memoId);
+  }, []);
+
+  useEffect(() => {
+    const handleStandaloneMobileEditorReturn = () => {
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+
+      const returnedMemoId = getStandaloneMobileEditorReturningMemoId();
+      if (!returnedMemoId) {
+        return;
+      }
+
+      applyMobileEditorReturnPreview(returnedMemoId);
+      consumeStandaloneMobileEditorReturn(returnedMemoId);
+      setRightView("editor");
+      setMobileBottomNavActive("home");
+      setActivePane("memos");
+      setSelectedMemoId(null);
+      setCreatedMemoEditId(null);
+      clearMemoSelection();
+    };
+
+    handleStandaloneMobileEditorReturn();
+    window.addEventListener("pageshow", handleStandaloneMobileEditorReturn);
+    document.addEventListener("visibilitychange", handleStandaloneMobileEditorReturn);
+
+    return () => {
+      window.removeEventListener("pageshow", handleStandaloneMobileEditorReturn);
+      document.removeEventListener("visibilitychange", handleStandaloneMobileEditorReturn);
+    };
+  }, [applyMobileEditorReturnPreview, clearMemoSelection]);
+
   useEffect(() => {
     const returnedMemoId = getMobileEditorReturnMemoId(location.search);
     if (!returnedMemoId) {
       return;
     }
 
-    const returnPreview = readMobileEditorReturnPreview(returnedMemoId);
-    if (returnPreview) {
-      setMobileEditorReturnPreview(returnPreview);
-      clearMobileEditorReturnPreview(returnedMemoId);
-    }
+    applyMobileEditorReturnPreview(returnedMemoId);
 
     skipNextHomeRouteSyncRef.current = false;
     setRightView("editor");
@@ -982,7 +1021,7 @@ export const WorkspaceApp = ({
     if (location.pathname !== "/" || location.search) {
       navigate("/", { replace: true });
     }
-  }, [clearMemoSelection, location.pathname, location.search, navigate]);
+  }, [applyMobileEditorReturnPreview, clearMemoSelection, location.pathname, location.search, navigate]);
 
   const replaceMemoSelection = useCallback((memoIds: string[]) => {
     setSelectedMemoIds(new Set(memoIds));
@@ -2626,6 +2665,7 @@ export const WorkspaceApp = ({
                     hasNextMemo={Boolean(nextMemoId)}
                     hasPreviousMemo={Boolean(previousMemoId)}
                     onBackToList={() => {
+                      applyMobileEditorReturnPreview(selectedMemo?.id ?? selectedMemoId);
                       clearPendingCreatedMemo();
                       setActivePane("memos");
                     }}

@@ -48,6 +48,9 @@ export const markStandaloneMobileEditorReturning = (memoId: string | null) => {
   sessionStorage.setItem(STANDALONE_MOBILE_EDITOR_RETURN_KEY, memoId);
 };
 
+export const getStandaloneMobileEditorReturningMemoId = () =>
+  sessionStorage.getItem(STANDALONE_MOBILE_EDITOR_RETURN_KEY);
+
 export const writeMobileEditorReturnPreview = (preview: MobileEditorReturnPreview) => {
   sessionStorage.setItem(STANDALONE_MOBILE_EDITOR_RETURN_PREVIEW_KEY, JSON.stringify(preview));
 };
