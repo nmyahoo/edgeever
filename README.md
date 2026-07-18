@@ -93,7 +93,7 @@ EdgeEver can be installed as a PWA on desktop or mobile home screens. On desktop
 
 ## Chrome/Edge Web Clipper
 
-The Chrome/Edge web clipper is complete and pending store publication.
+The Chrome/Edge web clipper is complete and currently under store review.
 
 ## Native Clients
 
